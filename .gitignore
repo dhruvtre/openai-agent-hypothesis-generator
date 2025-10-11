@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Source Reference
+claude-agent-sdk-python/
+openai-agents-python/
+Context.md/
+
+# WIP Files
+claude_agent.py
+prompts.py

@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
-from agents import Agent, Runner, OpenAIChatCompletionsModel
+from agents import OpenAIChatCompletionsModel
+from openai import AsyncOpenAI
 
 def create_model(provider="openai", model_name=None):
     """
@@ -14,14 +15,13 @@ def create_model(provider="openai", model_name=None):
         Model object or model name string
     """
     if provider == "openrouter":
-        from openai import AsyncOpenAI
-        
+
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
         if not openrouter_key:
             raise ValueError("OPENROUTER_API_KEY environment variable is required for OpenRouter")
         
         if not model_name:
-            model_name = "anthropic/claude-3.5-sonnet"  # Default OpenRouter model
+            model_name = os.getenv("OPENROUTER_MODEL_NAME", "anthropic/claude-3.5-sonnet")
             
         model_obj = OpenAIChatCompletionsModel(
             model=model_name,
@@ -35,6 +35,6 @@ def create_model(provider="openai", model_name=None):
     else:
         # For OpenAI, just return the model name string
         if not model_name:
-            model_name = "gpt-5"  # Default OpenAI model
+            model_name = os.getenv("OPENAI_MODEL_NAME", "gpt-5")
         print(f"✅ Using OpenAI model: {model_name}")
         return model_name

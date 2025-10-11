@@ -102,7 +102,14 @@ async def main():
     print(f"\nModel provider: {provider}")
 
     print("\n=== Streaming Hypothesis Generation ===")
-    hypothesis_model = create_model(provider, "gpt-5" if provider == "openai" else "anthropic/claude-sonnet-4.5")
+    
+    # Get model name from environment variables
+    if provider == "openai":
+        model_name = os.getenv("OPENAI_MODEL_NAME")
+    else:
+        model_name = os.getenv("OPENROUTER_MODEL_NAME")
+    
+    hypothesis_model = create_model(provider, model_name)
     
     hypotheses_generator_agent = OpenAIAgentWrapper(name="Hypotheses Generator Agent 1",
                                                     instructions=hypothesis_generator_instructions,

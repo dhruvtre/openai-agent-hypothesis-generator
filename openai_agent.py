@@ -82,12 +82,24 @@ class OpenAIAgentWrapper:
                         yield {"type": "message", "data": text}
 
 
+def get_user_input():
+    """Get user input for hypothesis generation parameters."""
+    print("=== Hypothesis Generator Setup ===")
+    domain = input("Research domain (e.g., 'AI for Drug Discovery'): ")
+    num_hypotheses = int(input("Number of hypotheses to generate: "))
+    research_idea = input("Describe your research idea: ")
+    return domain, num_hypotheses, research_idea
+
+
 async def main():
     """Main function to demonstrate OpenAI agent usage."""
     
+    # Get user input
+    domain, num_hypotheses, research_idea = get_user_input()
+    
     # Configure model provider
     provider = os.getenv("MODEL_PROVIDER", "openai")
-    print(f"Model provider: {provider}\n")
+    print(f"\nModel provider: {provider}")
 
     print("\n=== Streaming Hypothesis Generation ===")
     hypothesis_model = create_model(provider, "gpt-5" if provider == "openai" else "anthropic/claude-sonnet-4.5")
@@ -100,13 +112,13 @@ async def main():
                                                     )],
                                                     model=hypothesis_model)
     context = ResearchContext(
-        problem_space_title="AI for Scientific Discovery",
-        number_of_hypothesis=2
+        problem_space_title=domain,
+        number_of_hypothesis=num_hypotheses
     )
     
     # Use streaming instead of waiting for complete response
-    print("Generating hypotheses (streaming):\n")
-    async for event in hypotheses_generator_agent.run_stream("Generate hypotheses for me.", context=context):
+    print(f"Generating {num_hypotheses} hypotheses for {domain}...\n")
+    async for event in hypotheses_generator_agent.run_stream(prompt=f"Please generate hypotheses for the following research idea : {research_idea}", context=context):
         if event["type"] == "text":
             # Print text as it streams in, character by character
             print(event["data"], end="", flush=True)

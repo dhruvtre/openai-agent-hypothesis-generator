@@ -1,0 +1,6 @@
+claude-agent-sdk
+openai-agents
+python-dotenv
+fastapi
+uvicorn[standard]
+pydantic

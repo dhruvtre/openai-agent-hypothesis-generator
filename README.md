@@ -1,33 +1,40 @@
-# OpenAI Agent Hypothesis Generator
+# Hypothesis Generator
 
-AI research assistant that generates testable hypotheses using OpenAI Agent SDK with multi-provider support and literature search.
+AI research assistant that generates testable hypotheses using OpenAI Agent SDK with multi-provider support, literature search, and a modern web interface.
 
 ## Quick Start
 
-1. Install dependencies: `pip install -r requirements.txt`
-2. Copy `.env.example` to `.env` and add your API keys
-3. Run: `python openai_agent.py`
+### Backend
+1. `cd backend`
+2. Install dependencies: `pip install -r requirements.txt`
+3. Copy `.env.example` to `.env` and add your API keys
+4. Run: `python app.py`
+
+### Frontend
+1. `cd frontend`
+2. Install dependencies: `npm install`
+3. Run: `npm run dev`
+4. Open: `http://localhost:3000/chat`
 
 ## Features
 
 - **Multi-Provider**: OpenAI and OpenRouter (Claude, Llama, etc.)
 - **Streaming Output**: Real-time hypothesis generation
-- **Literature Search**: Academic research integration
+- **Literature Search**: Academic research integration  
+- **Web Interface**: Modern React UI with tool call visibility
 - **Structured JSON**: Citations and compute budgets included
 
 ## Configuration
 
-Set in `.env`:
+Set in `backend/.env`:
 - `MODEL_PROVIDER`: `"openai"` or `"openrouter"`
 - `OPENAI_API_KEY`: Required for OpenAI models
 - `OPENROUTER_API_KEY`: Required for OpenRouter models
 
-## Files
+## Structure
 
-- `openai_agent.py` - Main agent with streaming
-- `tools.py` - Literature search agent
-- `context.py` - Dynamic prompts and research context
-- `backend_utils.py` - Multi-provider model setup
+- `backend/` - Python FastAPI server and agent logic
+- `frontend/` - Next.js React web interface
 
 ## Output Format
 

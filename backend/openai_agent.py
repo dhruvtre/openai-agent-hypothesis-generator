@@ -6,6 +6,7 @@ supporting both OpenAI and OpenRouter model providers with real-time streaming o
 """
 
 import os
+import json
 import asyncio
 from dotenv import load_dotenv
 from agents import Agent, Runner, OpenAIChatCompletionsModel
@@ -73,7 +74,30 @@ class OpenAIAgentWrapper:
                 yield {"type": "text", "data": event.data.delta}
             elif event.type == "run_item_stream_event":
                 if event.item.type == "tool_call_item":
-                    yield {"type": "tool_call", "data": f"Calling tool: {event.item.raw_item.name}"}
+                    # Extract tool name
+                    tool_name = event.item.raw_item.name
+                    tool_info = f"Calling tool: {tool_name}"
+                    
+                    # Try to extract arguments and show meaningful information
+                    if hasattr(event.item.raw_item, 'arguments') and event.item.raw_item.arguments:
+                        try:
+                            args = json.loads(event.item.raw_item.arguments)
+                            # For literature search, show the query parameter
+                            if tool_name == "literature_search" and 'query' in args:
+                                tool_info += f" - Searching for: '{args['query']}'"
+                            elif args:
+                                # For other tools, show key parameters (truncate if too long)
+                                params = []
+                                for key, value in list(args.items())[:2]:  # Show max 2 params
+                                    if isinstance(value, str) and len(value) > 50:
+                                        value = value[:47] + "..."
+                                    params.append(f"{key}: {value}")
+                                if params:
+                                    tool_info += f" - Parameters: {', '.join(params)}"
+                        except (json.JSONDecodeError, AttributeError):
+                            pass
+                    
+                    yield {"type": "tool_call", "data": tool_info}
                 elif event.item.type == "tool_call_output_item":
                     yield {"type": "tool_output", "data": event.item.output}
                 elif event.item.type == "message_output_item":

@@ -105,6 +105,82 @@ class OpenAIAgentWrapper:
                     if text:
                         yield {"type": "message", "data": text}
 
+    async def run_stream_with_extraction(self, prompt: str, context=None):
+        """
+        Enhanced streaming with real-time hypothesis extraction.
+        
+        Delegates to existing run_stream() and adds hypothesis detection events.
+        Maintains all original functionality while adding extraction capabilities.
+        
+        Args:
+            prompt: The user prompt to process
+            context: Optional context (contains expected hypothesis count)
+            
+        Yields:
+            - All original stream events from run_stream()
+            - "hypothesis_found" events when complete JSON blocks detected
+            - "extraction_complete" summary event at the end
+        """
+        from backend_utils import extract_hypotheses
+        
+        # Extract expected count from context for progress tracking
+        expected_count = getattr(context, 'number_of_hypothesis', None) if context else None
+        
+        # Initialize tracking variables
+        text_buffer = ""
+        extracted_count = 0
+
+        # Delegate to existing run_stream and enhance with extraction
+        async for event in self.run_stream(prompt, context):
+            # Always yield original events first (preserves existing behavior)
+            yield event
+
+            # Only process text events for hypothesis extraction
+            if event.get("type") != "text":
+                continue
+
+            # Accumulate text in buffer
+            text_buffer += event["data"]
+            
+            # Run extraction on the growing buffer
+            hypotheses = extract_hypotheses(text_buffer)
+
+            # Skip if no new hypotheses found
+            if len(hypotheses) <= extracted_count:
+                continue
+
+            # Emit events for newly found hypotheses
+            for index in range(extracted_count, len(hypotheses)):
+                hypothesis = hypotheses[index]
+                extracted_count += 1
+                
+                # Build progress indicator
+                progress = f"{extracted_count}/{expected_count}" if expected_count else str(extracted_count)
+                
+                yield {
+                    "type": "hypothesis_found",
+                    "data": hypothesis,
+                    "id": extracted_count,
+                    "progress": progress,
+                    "summary": (
+                        f"Hypothesis {extracted_count}: "
+                        f"{hypothesis.get('claim', '')[:80]}..."
+                    ),
+                }
+
+        # Emit final summary if any hypotheses were extracted
+        if extracted_count > 0:
+            yield {
+                "type": "extraction_complete",
+                "total_hypotheses": extracted_count,
+                "expected": expected_count,
+                "message": (
+                    f"Successfully extracted {extracted_count} hypothesis"
+                    f"{'es' if extracted_count != 1 else ''}"
+                    + (f" (expected {expected_count})" if expected_count else "")
+                ),
+            }
+
 
 def get_user_input():
     """Get user input for hypothesis generation parameters."""
@@ -149,7 +225,7 @@ async def main():
     
     # Use streaming instead of waiting for complete response
     print(f"Generating {num_hypotheses} hypotheses for {domain}...\n")
-    async for event in hypotheses_generator_agent.run_stream(prompt=f"Please generate hypotheses for the following research idea : {research_idea}", context=context):
+    async for event in hypotheses_generator_agent.run_stream_with_extraction(prompt=f"Please generate hypotheses for the following research idea : {research_idea}", context=context):
         if event["type"] == "text":
             # Print text as it streams in, character by character
             print(event["data"], end="", flush=True)
@@ -160,6 +236,12 @@ async def main():
             # Show tool results (truncated for readability)
             output_preview = str(event['data'])[:100] + "..." if len(str(event['data'])) > 100 else str(event['data'])
             print(f">>> Tool result: {output_preview}\n")
+        elif event["type"] == "hypothesis_found":
+            # Show real-time hypothesis detection
+            print(f"\n---\n[{event['progress']} Hypothesis found] {event['summary']}\n")
+        elif event["type"] == "extraction_complete":
+            # Final summary of extraction
+            print(f"\n=== Extraction Complete ===\n{event['message']}\n")
     
 
 

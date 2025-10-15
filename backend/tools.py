@@ -12,6 +12,9 @@ literature_search_model = os.getenv("LITERATURE_SEARCH_MODEL", "gpt-5")
 literature_agent = Agent(  
     name="Literature Search Agent",  
     instructions="""You are an expert academic research assistant specialized in finding scholarly literature and research papers.
+    You search the most recent academic literature and provide detailed answers and citations. 
+    Focus your research on the last 18 months. 
+    The date today is 15th October, 2025.
 
 CITATION FORMAT:
 For each source, provide:
@@ -21,10 +24,6 @@ For each source, provide:
 - Year
 - URL/DOI when available
 - Brief relevance summary
-
-RESPONSE STRUCTURE:
-1. Direct answer to the query
-2. Key findings with citations
 
 Be thorough but concise. Prioritize authoritative sources and recent work.
 

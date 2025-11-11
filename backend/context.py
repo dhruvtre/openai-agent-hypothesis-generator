@@ -43,6 +43,7 @@ Each hypothesis must be in the following JSON format:
     "hours": "[<6]",
     "memory": "[40GB]"
   }},
+  "reasoning": "[Brief reasoning on decision relevance]",
   "citations": {{
     "dataset": [{{"title":"", "url":"", "venue":"", "year":""}}],
     "baseline": [{{"title":"", "url":"", "venue":"", "year":""}}],
@@ -70,7 +71,7 @@ To do this you have the following tools available to you:
    Only public, **versioned** datasets; **record version/date and split**, and cite the source if newly introduced.
 
 5. **Baseline strength**
-   Must compare against current **SOTA** or most widely-used baseline, **verified via o3\_search** (name the model/version clearly).
+   Must compare against current **SOTA** or most widely-used baseline, **verified via literature_search** (name the model/version clearly).
 
 6. **Meaningful improvement & alignment**
    Please ensure that each **hypothesis** allows for showcasing meaningful performance improvement to support the research idea and remains aligned with the key proposal of the research idea. **Name primary evaluation metrics and a numeric success threshold, and list all key process/ops metric to track.**
@@ -92,20 +93,23 @@ To do this you have the following tools available to you:
 
 ## Process
 
-1. Start with any research idea shared at the start of your process.
-2. For each desired {ctx.number_of_hypothesis} hypotheses (the working loop):
-• Draft the claim, anchored to the revised idea.
+1. Start with detailing your understading of the research idea shared at the start of your process.
+2. List all the high level details you must gather for a holistic understanding of what already exists related to the research idea in {ctx.problem_space_title}. 
+3. Identify additional hypotheses required toward the end goal of a meaningful contribution as specified before. For each desired {ctx.number_of_hypothesis} hypotheses (the working loop):
+• Draft the claim, anchored to the idea shared.
 • literature_search (liberally) to verify dataset and baseline availability and to identify both evaluation metrics and process/ops metrics commonly reported for this task. Capture citations.
 • literature_search to confirm a concrete dataset release/version, splits, and size; capture citations.
 • Estimate compute hours for a single-GPU (A100 40GB or equivalent) run; skip if > 6 hours.
 • Append to the local list once the claim, dataset, baseline, primary metric, success threshold (numeric), budget, and citations are all present.
-3. Run a duplicate check against the portfolio of hypotheses and an intra-list diversity guard.
+4. Run a duplicate check against the portfolio of hypotheses and an intra-list diversity guard.
 Hypotheses must differ on ≥ 1 axis in objective, model component, data, evaluation. If a clash is found, revise or replace the weaker one.
-4. Finish by outputting all hypotheses in the format shared above.
-5. Only output after rigorous self-review.
-Confirm: (a) numeric success thresholds, (b) verified datasets/baselines with citations, (c) diversity guard passed, (d) compute ≤ 6 hours on a single GPU.
-6. Tool use reminder - Prefer literature_search for literature/baseline/metric queries and literature_search only when you need a concrete dataset release/version.
-7. Keep literature_search substantive, not spammy - Perform at least 5 substantive literature_search queries to understand the problem and idea space and at least 3 literature_search queries per hypothesis where needed to establish datasets, baselines, and both evaluation and process metrics; avoid redundant queries once evidence is sufficient.
+5. Conduct a rigorous self-review. Confirm: (a) numeric success thresholds, (b) verified datasets/baselines with citations, (c) diversity guard passed, (d) compute ≤ 6 hours on a single GPU.
+6. Finish by outputting all hypotheses in the JSON format shared above. If there are more than one, return them all in one JSON array.
+7. The end of your message should be the JSON objects for the hypotheses only, without any additional commentary.
+
+## Tool Use Reminders
+1. Keep literature_search substantive, not spammy - Perform at least 5 substantive literature_search queries to understand the problem and idea space and at least 3 literature_search queries per hypothesis where needed to establish datasets, baselines, and both evaluation and process metrics; avoid redundant queries once evidence is sufficient.
+2. Always phrase literature_search queries as detailed questions to get the best results. The tool provides academic-literature grounded answers with citations.
 """
     
     return prompt

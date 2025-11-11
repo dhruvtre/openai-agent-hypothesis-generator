@@ -23,3 +23,6 @@ Context.md/
 # WIP Files
 claude_agent.py
 prompts.py
+
+# Session Files
+sessions/

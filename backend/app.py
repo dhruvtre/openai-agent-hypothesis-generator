@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from openai_agent import OpenAIAgentWrapper
 from tools import literature_agent
 from context import hypothesis_generator_instructions, ResearchContext
-from backend_utils import create_model
+from backend_utils import create_model, save_session
 
 load_dotenv()
 
@@ -140,6 +140,12 @@ async def generate_stream(prompt: str, context: ResearchContext) -> AsyncGenerat
     Generate OpenAI-compatible SSE stream from agent output.
     """
     
+    # Initialize session tracking variables
+    raw_output = ""
+    extracted_hypotheses = []
+    extraction_stats = {}
+    tool_interactions = []
+    
     # Send initial stream chunk
     chunk_id = f"chatcmpl-{int(time.time())}"
     
@@ -157,9 +163,12 @@ async def generate_stream(prompt: str, context: ResearchContext) -> AsyncGenerat
     }
     yield f"data: {json.dumps(initial_chunk)}\n\n"
     
-    # Stream content from agent
-    async for event in agent.run_stream(prompt=prompt, context=context):
+    # Stream content from agent with hypothesis extraction
+    async for event in agent.run_stream_with_extraction(prompt=prompt, context=context):
         if event["type"] == "text":
+            # Collect raw output for session saving
+            raw_output += event["data"]
+            
             # Stream text chunks in OpenAI format
             chunk = {
                 "id": chunk_id,
@@ -188,6 +197,49 @@ async def generate_stream(prompt: str, context: ResearchContext) -> AsyncGenerat
                 }]
             }
             yield f"data: {json.dumps(chunk)}\n\n"
+        
+        elif event["type"] == "hypothesis_found":
+            # Collect extracted hypothesis for session saving
+            extracted_hypotheses.append(event["data"])
+            
+            # Send hypothesis extraction event to frontend
+            chunk = {
+                "id": chunk_id,
+                "object": "chat.completion.chunk",
+                "created": int(time.time()),
+                "model": "hypothesis-generator",
+                "choices": [{
+                    "index": 0,
+                    "delta": {"content": f"\n[HYPOTHESIS {event['progress']} EXTRACTED]\n{event['summary']}\n"},
+                    "finish_reason": None
+                }]
+            }
+            yield f"data: {json.dumps(chunk)}\n\n"
+            
+        elif event["type"] == "extraction_complete":
+            # Collect extraction stats and tool interactions for session saving
+            extraction_stats = {
+                "total_extracted": event.get('total_hypotheses', 0),
+                "expected": event.get('expected', None),
+                "extraction_time": time.time(),
+                "message": event.get('message', '')
+            }
+            # Collect tool interactions for enhanced logging
+            tool_interactions = event.get('tool_interactions', [])
+            
+            # Send extraction summary to frontend
+            chunk = {
+                "id": chunk_id,
+                "object": "chat.completion.chunk", 
+                "created": int(time.time()),
+                "model": "hypothesis-generator",
+                "choices": [{
+                    "index": 0,
+                    "delta": {"content": f"\n=== EXTRACTION COMPLETE ===\n{event['message']}\n"},
+                    "finish_reason": None
+                }]
+            }
+            yield f"data: {json.dumps(chunk)}\n\n"
     
     # Send final chunk
     final_chunk = {
@@ -205,6 +257,44 @@ async def generate_stream(prompt: str, context: ResearchContext) -> AsyncGenerat
     
     # Send [DONE] marker
     yield "data: [DONE]\n\n"
+    
+    # Save session data after streaming completes
+    try:
+        # Extract metadata from context
+        domain = context.problem_space_title
+        num_hypotheses = context.number_of_hypothesis
+        
+        # Get provider/model info from environment
+        provider = os.getenv("MODEL_PROVIDER", "openai")
+        if provider == "openai":
+            model_name = os.getenv("OPENAI_MODEL_NAME", "gpt-4")
+        else:
+            model_name = os.getenv("OPENROUTER_MODEL_NAME", "unknown")
+        
+        # Use the prompt as research_idea (best we can extract from API request)
+        research_idea = prompt.replace("Please generate hypotheses for the following research idea: ", "")
+        
+        session_file = save_session(
+            domain=domain,
+            num_hypotheses=num_hypotheses,
+            research_idea=research_idea,
+            provider=provider,
+            model_name=model_name,
+            raw_output=raw_output,
+            extracted_hypotheses=extracted_hypotheses,
+            extraction_stats=extraction_stats,
+            tool_interactions=tool_interactions  # NEW: Pass tool interaction data
+        )
+        
+        # Log successful save (optional - won't reach frontend)
+        print(f"API session saved: {session_file}")
+        print(f"Extracted {len(extracted_hypotheses)}/{num_hypotheses} hypotheses")
+        print(f"Tool interactions: {len(tool_interactions)}")
+        
+    except Exception as e:
+        # Log error but don't break the API response
+        print(f"Warning: Failed to save API session: {e}")
+        print(f"Session data: {len(raw_output)} chars, {len(extracted_hypotheses)} hypotheses, {len(tool_interactions)} tool calls")
 
 if __name__ == "__main__":
     import uvicorn
